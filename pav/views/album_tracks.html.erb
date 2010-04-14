@@ -1,0 +1,17 @@
+<h1>Tracks for <%= @album.albumname %></h1>
+<ul>
+<% @tracks.each do |track| %>
+<li>
+<%= track.id %>
+<%= track.title %>
+<%= track.tracknote %>
+<%= track.tracklink %>
+<%= track.show %>
+<%= track.talent %>
+<%= track.duration %>
+<%= track.publisher %>
+<%= track.datecopyrighted %>
+<%= track.created_at %>
+</li>
+<% end %>
+</ul>
