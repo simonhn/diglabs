@@ -12,13 +12,10 @@ require 'dm-aggregates'
 require 'json' 
 require 'rack/contrib/jsonp'
 require 'builder'
-#require 'sinatra/respond_to'
-#Sinatra::Application.register Sinatra::RespondTo
+require 'sinatra/respond_to'
+Sinatra::Application.register Sinatra::RespondTo
 
-# A MySQL connection:
-#DataMapper::setup(:default, 'mysql://simonhn:Kongen1123@localhost/ratpack')
- 
-
+# A MySQL connection: 
 configure do
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
