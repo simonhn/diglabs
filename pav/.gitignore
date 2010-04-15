@@ -2,4 +2,4 @@ log/*.log
 log/*.pid
 tmp/**/*
 .DS_Store
-config/settings.yml
+pav/config/settings.yml
