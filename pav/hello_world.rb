@@ -20,7 +20,7 @@ configure do
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
-  DataMapper::Logger.new('/home/simonhn/datamapper.log', :info)
+  #DataMapper::Logger.new('/home/simonhn/datamapper.log', :info)
   #DataObjects::Mysql.logger = DataObjects::Logger.new('/home/simonhn/datamapper.log', 0)
 end
 
