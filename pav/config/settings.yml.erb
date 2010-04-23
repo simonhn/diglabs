@@ -1,12 +1,12 @@
 # store your custom template at foo/bar/database.yml.erb
-set :template_dir, "config"
+#set :template_dir, "config"
 #
 # example of database template
 
-  adapter: mysql
-  database: ratpack
-  host: localhost
-  username: simonhn
-  password: #{Capistrano::CLI.ui.ask("Enter MySQL database password: ")}
-  encoding: utf8
-  timeout: 5000
+adapter: mysql
+host: localhost
+username: simonhn
+password: #{Capistrano::CLI.ui.ask("Enter MySQL database password: ")}
+database: ratpack
+encoding: utf8
+timeout: 5000
