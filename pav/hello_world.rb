@@ -60,6 +60,9 @@ class Track
     has n, :artists, :through => Resource
     has n, :albums, :through => Resource
     has n, :plays
+    def date
+        created_at.strftime "%R on %B %d, %Y"
+    end
 end
 
 class Play
