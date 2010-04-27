@@ -7,4 +7,10 @@ pav/config/capistrano_database.rb
 pav/config/deploy.rb
 pav/config/settings.yml.erb
 pav/Capfile
+../index idea.tiff
+../notes.txt
+Capfile
+conf/settings.yml
+config/
+../sim.png
 
