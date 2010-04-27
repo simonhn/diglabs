@@ -23,7 +23,7 @@ header#main h2 { font-family: "OFLSortsMillGoudyItalic"; font-style: italic; fon
 header#main h3 { font-family: Times; color: #C51020; letter-spacing: 0.2em; font-size: 0.8em; text-transform: uppercase; }
 label{
   float: left;
-  width: 200px;
+  width: 210px;
   text-align: right;
   padding-right: 7px;
 }
