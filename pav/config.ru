@@ -5,7 +5,7 @@ require 'rubygems'
 gem 'sinatra', '=0.9.6'
 require 'sinatra'
 #require 'rack/cache'
-require 'hello_world'
+require 'pav'
 
 #use Rack::Cache,
 #  :verbose     => true,
