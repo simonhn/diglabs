@@ -12,6 +12,7 @@ require 'dm-aggregates'
 require 'json' 
 require 'rack/contrib/jsonp'
 require 'builder'
+
 require 'sinatra/respond_to'
 Sinatra::Application.register Sinatra::RespondTo
 
@@ -110,12 +111,56 @@ end
 
 #
 get '/parse' do
+  items =[]
   xml = Crack::XML.parse(HTTParty.get('http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml').body)
-  xml.inspect
-  #xml["abcmusic_playout"]["items"]["item"][].each do |item|
-    #item.inspect
-  #end
+  #xml["abcmusic_playout"]["items"]["item"].last["title"].inspect
+  xml["abcmusic_playout"]["items"]["item"].each do |item|
+    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'])
+    if @artist.save
+      #creating and saving album
+      @albums = Album.first_or_create(:albumname => item['album']['albumname'])
+      @albums.save
+      
+      #creating and adding tracks to album  
+      @tracks = @albums.tracks.first_or_create(:title => item['title'])
+      @tracks.save
+      
+      #add the tracks to the artist
+      @johns = @artist.tracks << @tracks
+      
+      #artist.tracks.plays
+      #if Play.get()
+      @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1)
+      @plays.save
+      @artist.save
+    else
+      'hat'
+    end
+  end
 end
+=begin
+  xml = HTTParty.get('http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml').body
+  doc = REXML::Document.new(xml)
+  t = {}
+  items = []
+  doc.elements.each('abcmusic_playout') do |ele|
+    t['pub_dt'] = Time.parse(ele.elements["publishtime"].text)
+  end
+
+  doc.elements.each('abcmusic_playout/items/item') do |ele|
+    t['artist'] = ele.elements["artist"].elements["artistname"].text
+    t['album'] = ele.elements["album"].elements["albumname"].text
+    t['title'] = ele.elements["title"].text
+    t['play_dt'] = Time.parse(ele.elements["playedtime"].text)
+    items << t
+  end
+  items.inspect
+=end
+  #print all artists
+  #items.each_with_index do |title, idx|
+   #  print "#{title} \n"
+  #end
+#end
 
 
 #Sinatra version info
@@ -208,6 +253,26 @@ end
 get '/track/:id/play/all' do
   content_type 'text/xml', :charset => 'utf-8'
     @plays = Track.get(params[:id]).plays
+end
+
+#show all artists
+get '/albums' do
+  @albums =  Album.all(:limit => 10, :order => [:created_at.desc ])
+    respond_to do |wants|
+      wants.html { erb :albums }
+      wants.xml { builder :albums }
+      wants.json { @albums.to_json }
+    end
+end
+
+#show all artists
+get '/albums/:limit' do
+  @albums =  Album.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
+  respond_to do |wants|
+    wants.html { erb :albums }
+    wants.xml { builder :albums }
+    wants.json { @albums.to_json }
+  end
 end
 
 # show album from id
