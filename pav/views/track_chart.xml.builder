@@ -1,3 +1,4 @@
+=begin
 builder do |xml|
 xml.instruct! :xml, :version => '1.0'
 xml.tracks do
@@ -8,5 +9,12 @@ xml.track :id => track.id do
   xml.artistname track.artistname
 end
 end
+end
+end
+=end
+xml.instruct! :xml, :version => '1.0'
+xml.chart do
+@tracks.each do |track|
+  xml.track :count => track.cnt.to_i, :tracktitle => track.title, :artist => track.artistname, :trackid => track.id
 end
 end

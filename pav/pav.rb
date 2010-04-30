@@ -1,14 +1,17 @@
 require 'rubygems'
 require 'sinatra'
 
+#for xml fetch and parse
 require 'httparty'
 require 'crack'
 
+#datamapper stuff
 require 'dm-core'
 require 'dm-serializer'
 require 'dm-timestamps'
 require 'dm-aggregates'
 
+#template systems
 require 'json' 
 require 'rack/contrib/jsonp'
 require 'builder'
@@ -16,7 +19,7 @@ require 'builder'
 require 'sinatra/respond_to'
 Sinatra::Application.register Sinatra::RespondTo
 
-# A MySQL connection: 
+# MySQL connection: 
 configure do
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
@@ -25,13 +28,13 @@ configure do
   #DataObjects::Mysql.logger = DataObjects::Logger.new('/home/simonhn/datamapper.log', 0)
 end
 
-#Models
+#Models - to be moved to individual files
 class Artist
     include DataMapper::Resource
     property :id, Serial
     property :artistname, String
     property :artistnote, Text
-    property :artistlink, String
+    property :artistlink, Text
     property :created_at, DateTime
     has n, :tracks, :through => Resource
 end
@@ -40,7 +43,7 @@ class Album
     include DataMapper::Resource
     property :id, Serial
     property :albumname, String
-    property :albumimage, String
+    property :albumimage, Text
     property :created_at, DateTime 
     has n, :tracks, :through => Resource
 end
@@ -50,13 +53,13 @@ class Track
     property :id, Serial
     property :title, String
     property :tracknote, Text
-    property :tracklink, String
-    property :show, String
-    property :talent, String
+    property :tracklink, Text
+    property :show, Text
+    property :talent, Text
     property :aust, String
     property :duration, Integer
-    property :publisher, String
-    property :datecopyrighted, DateTime
+    property :publisher, Text
+    property :datecopyrighted, Integer
     property :created_at, DateTime
     has n, :artists, :through => Resource
     has n, :albums, :through => Resource
@@ -86,7 +89,6 @@ class Channel
 end
 
 DataMapper.auto_upgrade!
-#DataMapper.auto_migrate!
 
 #Caching 10 minutes - might be a tad too much
 before do
@@ -111,56 +113,32 @@ end
 
 #
 get '/parse' do
-  items =[]
   xml = Crack::XML.parse(HTTParty.get('http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml').body)
-  #xml["abcmusic_playout"]["items"]["item"].last["title"].inspect
   xml["abcmusic_playout"]["items"]["item"].each do |item|
-    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'])
+    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'], :artistnote => item['artist']['artistnote'], :artistlink => item['artist']['artistlink'])
     if @artist.save
       #creating and saving album
-      @albums = Album.first_or_create(:albumname => item['album']['albumname'])
+      @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
       @albums.save
       
-      #creating and adding tracks to album  
-      @tracks = @albums.tracks.first_or_create(:title => item['title'])
+      #creating and adding tracks to album
+      @tracks = @albums.tracks.first_or_create(:title => item['title'],:tracknote => item['tracknote'],:tracklink => item['tracklink'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
       @tracks.save
       
       #add the tracks to the artist
       @johns = @artist.tracks << @tracks
-      
-      #artist.tracks.plays
-      #if Play.get()
-      @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1)
-      @plays.save
+      @johns.save
+      #artist.tracks.plays: only add if playedtime does not exsist
+      play_items = Play.count(:playedtime=>item['playedtime'])
+      if play_items < 1
+        @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1, :playedtime=>item['playedtime'])
+        @plays.save
+      end
       @artist.save
-    else
-      'hat'
     end
   end
+  redirect '/stats'
 end
-=begin
-  xml = HTTParty.get('http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml').body
-  doc = REXML::Document.new(xml)
-  t = {}
-  items = []
-  doc.elements.each('abcmusic_playout') do |ele|
-    t['pub_dt'] = Time.parse(ele.elements["publishtime"].text)
-  end
-
-  doc.elements.each('abcmusic_playout/items/item') do |ele|
-    t['artist'] = ele.elements["artist"].elements["artistname"].text
-    t['album'] = ele.elements["album"].elements["albumname"].text
-    t['title'] = ele.elements["title"].text
-    t['play_dt'] = Time.parse(ele.elements["playedtime"].text)
-    items << t
-  end
-  items.inspect
-=end
-  #print all artists
-  #items.each_with_index do |title, idx|
-   #  print "#{title} \n"
-  #end
-#end
 
 
 #Sinatra version info
@@ -222,11 +200,13 @@ end
 
 #Count all artists
 get '/stats' do
-  artistcount = Artist.count
-  trackcount = Track.count
-  playcount = Play.count
-  albumcount = Album.count 
-  "There's #{artistcount} artists, #{trackcount} tracks, #{playcount} plays and #{albumcount} albums in the database"
+  @artistcount = Artist.count
+  @trackcount = Track.count
+  @playcount = Play.count
+  @albumcount = Album.count 
+  respond_to do |wants|
+    wants.html { erb :stats }
+  end
 end
 
 # show tracks from artist
