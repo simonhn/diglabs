@@ -8,7 +8,7 @@
 <body>
 
 <div class="snippet">
-  <form action="/" method="POST">
+ <!-- <form action="/" method="POST">
 		<p>
     <label for="artistname">Artist:</label>
     <input type="text" name="artistname" id="artistname"  size="20"/>
@@ -22,14 +22,16 @@
     <input type="text" name="albumname"  id="albumname" size="20"/>
     </p>
 		<input type="submit" value="Save"/>
-	</form>
-The PAV api is under devlopment and currently support the following url 
+	</form> 
+	-->
+<p>
+The pav:api is under development and currently supports the following url 
 patterns. More to come.
-
+</p>
+<p>
 Return type can either be infered by content negotiation (by setting request Accept header to 
-desired content type) or by appending the content type to the url (.html, .xml, .json).
-
-JsonP for cross-domain access is delivered to requests with callback param.
+desired content type) or by appending the content type to the url (.html, .xml, .json). JsonP for cross-domain access is delivered to requests with callback param.
+</p>
 
 <ul>
 	<li><a href="/artists">/artists {html | xml | json}</a></li>

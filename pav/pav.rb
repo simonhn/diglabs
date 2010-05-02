@@ -75,10 +75,10 @@ class Play
     property :playedtime, DateTime
     belongs_to :track
     belongs_to :channel
-    before :save, :update_count
-    def update_count
+    #before :save, :update_count
+    #def update_count
       #track_id
-    end
+    #end
 end
 
 class Channel
