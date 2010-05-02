@@ -229,6 +229,26 @@ get '/track/:id' do
   end
 end
 
+#show tracks
+get '/tracks' do
+ @tracks = Track.all(:limit => 10, :order => [:created_at.desc ])
+ respond_to do |wants|
+    wants.html { erb :tracks }
+    wants.xml { builder :tracks }
+    wants.json {@tracks.to_json}
+  end
+end
+
+#show tracks with limit
+get '/tracks/:limit' do
+  @tracks = Track.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
+  respond_to do |wants|
+    wants.html { erb :tracks }
+    wants.xml { builder :tracks }
+    wants.json {@tracks.to_json}
+  end
+end
+
 # show plays for a track
 get '/track/:id/play/all' do
   content_type 'text/xml', :charset => 'utf-8'
