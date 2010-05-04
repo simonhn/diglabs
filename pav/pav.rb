@@ -21,11 +21,10 @@ Sinatra::Application.register Sinatra::RespondTo
 
 # MySQL connection: 
 configure do
+  #DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
-  #DataMapper::Logger.new('/home/simonhn/datamapper.log', :info)
-  #DataObjects::Mysql.logger = DataObjects::Logger.new('/home/simonhn/datamapper.log', 0)
 end
 
 #Models - to be moved to individual files
@@ -144,7 +143,9 @@ get '/parse' do
       #artist.tracks.plays: only add if playedtime does not exsist
       play_items = Play.count(:playedtime=>item['playedtime'], :channel_id=>index+1)
       if play_items < 1
-        @plays = @tracks.plays.new(:track_id => @tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
+        @play = Play.new(:track_id =>@tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
+        @play.save
+        @plays = @tracks.plays << @play
         @plays.save
       end
       @artist.save
@@ -354,4 +355,4 @@ get '/chart/artist' do
 end
 
 DataMapper.auto_upgrade!
-#DataMapper::auto_migrate!
+DataMapper::auto_migrate!
