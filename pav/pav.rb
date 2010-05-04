@@ -355,4 +355,4 @@ get '/chart/artist' do
 end
 
 DataMapper.auto_upgrade!
-DataMapper::auto_migrate!
+#DataMapper::auto_migrate!
