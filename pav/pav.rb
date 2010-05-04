@@ -32,7 +32,7 @@ end
 class Artist
     include DataMapper::Resource
     property :id, Serial
-    property :artistname, String
+    property :artistname, String, :length => 512
     property :artistnote, Text
     property :artistlink, Text
     property :created_at, DateTime
@@ -42,7 +42,7 @@ end
 class Album
     include DataMapper::Resource
     property :id, Serial
-    property :albumname, String
+    property :albumname, String, :length => 512
     property :albumimage, Text
     property :created_at, DateTime 
     has n, :tracks, :through => Resource
@@ -51,12 +51,12 @@ end
 class Track
     include DataMapper::Resource
     property :id, Serial
-    property :title, String
+    property :title, String, :length => 512
     property :tracknote, Text
     property :tracklink, Text
     property :show, Text
     property :talent, Text
-    property :aust, String
+    property :aust, String, :length => 512
     property :duration, Integer
     property :publisher, Text
     property :datecopyrighted, Integer
@@ -66,6 +66,9 @@ class Track
     has n, :plays
     def date
         created_at.strftime "%R on %B %d, %Y"
+    end
+    def playcount
+      Play.count(:track_id => self.id);
     end
 end
 
@@ -77,18 +80,17 @@ class Play
     belongs_to :channel
     #before :save, :update_count
     #def update_count
-      #track_id
+      #augment count with one on Track.play_count where track_id
     #end
 end
 
 class Channel
     include DataMapper::Resource
     property :id, Serial
-    property :channelname, String
+    property :channelname, String, :length => 512
     has n, :plays
 end
 
-DataMapper.auto_upgrade!
 
 #Caching 10 minutes - might be a tad too much
 before do
@@ -121,17 +123,21 @@ get '/parse' do
       @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
       @albums.save
       
-      #creating and adding tracks to album
-      @tracks = @albums.tracks.first_or_create(:title => item['title'],:tracknote => item['tracknote'],:tracklink => item['tracklink'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
+      #creating and saving track
+      @tracks = Track.first_or_create(:title => item['title'],:tracknote => item['tracknote'],:tracklink => item['tracklink'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
       @tracks.save
       
-      #add the tracks to the artist
+      #add the track to album
+      @album_tracks = @albums.tracks << @tracks
+      @album_tracks.save
+      
+      #add the track to the artist
       @johns = @artist.tracks << @tracks
       @johns.save
       #artist.tracks.plays: only add if playedtime does not exsist
       play_items = Play.count(:playedtime=>item['playedtime'])
       if play_items < 1
-        @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1, :playedtime=>item['playedtime'])
+        @plays = @tracks.plays.new(:track_id => @tracks.id, :channel_id => 1, :playedtime=>item['playedtime'])
         @plays.save
       end
       @artist.save
@@ -231,7 +237,7 @@ end
 
 #show tracks
 get '/tracks' do
- @tracks = Track.all(:limit => 10, :order => [:created_at.desc ])
+ @tracks = Track.all(:limit => 10, :order => [:playcount.desc ])
  respond_to do |wants|
     wants.html { erb :tracks }
     wants.xml { builder :tracks }
@@ -241,7 +247,7 @@ end
 
 #show tracks with limit
 get '/tracks/:limit' do
-  @tracks = Track.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
+  @tracks = Track.all(:limit => params[:limit].to_i, :order => [:playcount.desc ])
   respond_to do |wants|
     wants.html { erb :tracks }
     wants.xml { builder :tracks }
@@ -338,3 +344,6 @@ get '/chart/artist' do
     wants.xml { builder :artist_chart }
   end
 end
+
+DataMapper.auto_upgrade!
+#DataMapper::auto_migrate!
