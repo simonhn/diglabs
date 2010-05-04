@@ -115,7 +115,14 @@ end
 
 #
 get '/parse' do
-  xml = Crack::XML.parse(HTTParty.get('http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml').body)
+  
+  xml_files = ["http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml",
+               "http://www.abc.net.au/jazz/xml/ABC_JazzJustPlayed.xml",
+               "http://www.abc.net.au/country/xml/ABC_CountryJustPlayed.xml"
+              ]
+              # http://www.abc.net.au/triplej/feeds/playout/triplejsydneyplayout.xml
+  xml_files.each_with_index do |file,index|
+  xml = Crack::XML.parse(HTTParty.get(file).body)
   xml["abcmusic_playout"]["items"]["item"].each do |item|
     @artist = Artist.first_or_create(:artistname => item['artist']['artistname'], :artistnote => item['artist']['artistnote'], :artistlink => item['artist']['artistlink'])
     if @artist.save
@@ -137,11 +144,12 @@ get '/parse' do
       #artist.tracks.plays: only add if playedtime does not exsist
       play_items = Play.count(:playedtime=>item['playedtime'])
       if play_items < 1
-        @plays = @tracks.plays.new(:track_id => @tracks.id, :channel_id => 1, :playedtime=>item['playedtime'])
+        @plays = @tracks.plays.new(:track_id => @tracks.id, :channel_id => index, :playedtime=>item['playedtime'])
         @plays.save
       end
       @artist.save
     end
+  end
   end
   redirect '/stats'
 end
