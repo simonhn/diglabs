@@ -123,14 +123,15 @@ get '/parse' do
   xml_files.each_with_index do |file,index|
   xml = Crack::XML.parse(HTTParty.get(file).body)
   xml["abcmusic_playout"]["items"]["item"].each do |item|
-    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'], :artistnote => item['artist']['artistnote'], :artistlink => item['artist']['artistlink'])
+    #commented out :artistnote => item['artist']['artistnote'],
+    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'],  :artistlink => item['artist']['artistlink'])
     if @artist.save
       #creating and saving album
       @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
       @albums.save
       
-      #creating and saving track
-      @tracks = Track.first_or_create(:title => item['title'],:tracknote => item['tracknote'],:tracklink => item['tracklink'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
+      #creating and saving track - commented out :tracklink => item['tracklink'] and ,:tracknote => item['tracknote'] - issue when multiple
+      @tracks = Track.first_or_create(:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
       @tracks.save
       
       #add the track to album
@@ -143,9 +144,9 @@ get '/parse' do
       #artist.tracks.plays: only add if playedtime does not exsist
       play_items = Play.count(:playedtime=>item['playedtime'], :channel_id=>index+1)
       if play_items < 1
-        @play = Play.new(:track_id =>@tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
-        @play.save
-        @plays = @tracks.plays << @play
+        @player = Play.new(:track_id =>@tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
+        @player.save
+        @plays = @tracks.plays << @player
         @plays.save
       end
       @artist.save
