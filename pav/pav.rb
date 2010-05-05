@@ -21,7 +21,7 @@ Sinatra::Application.register Sinatra::RespondTo
 
 # MySQL connection: 
 configure do
-  #DataMapper::Logger.new('log/datamapper.log', :debug)
+  DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
@@ -124,14 +124,14 @@ get '/parse' do
   xml = Crack::XML.parse(HTTParty.get(file).body)
   xml["abcmusic_playout"]["items"]["item"].each do |item|
     #commented out :artistnote => item['artist']['artistnote'],
-    @artist = Artist.first_or_create(:artistname => item['artist']['artistname'],  :artistlink => item['artist']['artistlink'])
+    @artist = Artist.first_or_create({:artistname => item['artist']['artistname']},{:artistname => item['artist']['artistname'],  :artistlink => item['artist']['artistlink']})
     if @artist.save
       #creating and saving album
       @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
       @albums.save
       
-      #creating and saving track - commented out :tracklink => item['tracklink'] and ,:tracknote => item['tracknote'] - issue when multiple
-      @tracks = Track.first_or_create(:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted'])
+      #creating and saving track - commented out  - issue when multiple
+      @tracks = Track.first_or_create({:title => item['title'],:duration => item['duration']},{:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:tracklink => item['tracklink'],:tracknote => item['tracknote'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted']})
       @tracks.save
       
       #add the track to album
@@ -356,4 +356,4 @@ get '/chart/artist' do
 end
 
 DataMapper.auto_upgrade!
-#DataMapper::auto_migrate!
+DataMapper::auto_migrate!
