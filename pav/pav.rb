@@ -21,7 +21,7 @@ Sinatra::Application.register Sinatra::RespondTo
 
 # MySQL connection: 
 configure do
-  DataMapper::Logger.new('log/datamapper.log', :debug)
+  #DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
@@ -356,4 +356,4 @@ get '/chart/artist' do
 end
 
 DataMapper.auto_upgrade!
-DataMapper::auto_migrate!
+#DataMapper::auto_migrate!
