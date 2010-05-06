@@ -1,3 +1,4 @@
+#core stuff
 require 'rubygems'
 require 'sinatra'
 
@@ -20,7 +21,7 @@ require 'builder'
 require 'sinatra/respond_to'
 Sinatra::Application.register Sinatra::RespondTo
 
-# MySQL connection: 
+# MySQL connection:
 configure do
   #DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
@@ -108,63 +109,10 @@ end
 
 #ROUTES
 
+#GET
 # Front page
 get '/' do
-  erb :new
-end
-
-#Fetching xml, parsing and storing it to db
-get '/parse' do
-  #utf-16 issue with triple j feed
-  # http://www.abc.net.au/triplej/feeds/playout/triplejsydneyplayout.xml
-  xml_files = ["http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml",
-               "http://www.abc.net.au/jazz/xml/ABC_JazzJustPlayed.xml",
-               "http://www.abc.net.au/country/xml/ABC_CountryJustPlayed.xml"]
-
-  xml_files.each_with_index do |file,index|
-    xml = Crack::XML.parse(HTTParty.get(file).body)
-      xml["abcmusic_playout"]["items"]["item"].each do |item|
-        @artist = Artist.first_or_create({:artistname => item['artist']['artistname']},{:artistname => item['artist']['artistname'], :artistnote => item['artist']['artistnote'], :artistlink => item['artist']['artistlink']})
-        if @artist.save
-          #creating and saving album
-          @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
-          @albums.save
-      
-          #creating and saving track - commented out  - issue when multiple
-          @tracks = Track.first_or_create({:title => item['title'],:duration => item['duration']},{:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:tracklink => item['tracklink'],:tracknote => item['tracknote'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted']})
-          @tracks.save
-      
-          #add the track to album
-          @album_tracks = @albums.tracks << @tracks
-          @album_tracks.save
-      
-          #add the track to the artist
-          @johns = @artist.tracks << @tracks
-          @johns.save
-      
-          #artist.tracks.plays: only add if playedtime does not exsist
-          play_items = Play.count(:playedtime=>item['playedtime'], :channel_id=>index+1)
-          if play_items < 1
-            @player = Play.new(:track_id =>@tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
-            @player.save
-            @plays = @tracks.plays << @player
-            @plays.save
-          end  
-          @artist.save
-        end
-      end
-    end
-    redirect '/stats'
-  end
-
-# show artist from id
-get '/artist/:id' do
-  @artist = Artist.get(params[:id])
-  respond_to do |wants|
-    wants.html { erb :artist }
-    wants.xml { builder :artist }
-    wants.json { @artist.to_json }
-  end
+  erb :front
 end
 
 #show all artists
@@ -187,43 +135,13 @@ get '/artists/:limit' do
   end
 end
 
-#POST
-# create from form
-=begin
-post '/' do
-  @artist = Artist.first_or_create(:artistname => params[:artistname])
-  if @artist.save
-    @albums = Album.first_or_create(:albumname => params[:albumname])
-    @albums.save
-    @tracks = @albums.tracks.first_or_create(:title => params[:tracktitle])
-    @tracks.save
-    @johns = @artist.tracks << @tracks
- 
-    @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1)
-    @plays.save
-    @artist.save
-    redirect "/artist/#{@artist.id}"
-  else
-    redirect '/'
-  end
-end
-=end
-
-#GET
-
-#Sinatra version info
-get '/about' do
-  "I'm running version " + Sinatra::VERSION 
-end
-
-#Count all artists
-get '/stats' do
-  @artistcount = Artist.count
-  @trackcount = Track.count
-  @playcount = Play.count
-  @albumcount = Album.count 
+# show artist from id
+get '/artist/:id' do
+  @artist = Artist.get(params[:id])
   respond_to do |wants|
-    wants.html { erb :stats }
+    wants.html { erb :artist }
+    wants.xml { builder :artist }
+    wants.json { @artist.to_json }
   end
 end
 
@@ -237,43 +155,7 @@ get '/artist/:id/tracks' do
   end
 end
 
-# show track
-get '/track/:id' do
-  @track = Track.get(params[:id])
-  respond_to do |wants|
-    wants.html { erb :track }
-    wants.xml { builder :track }
-    wants.json {@track.to_json}
-  end
-end
-
-#show tracks
-get '/tracks' do
- @tracks = Track.all(:limit => 10, :order => [:created_at.desc ])
- respond_to do |wants|
-    wants.html { erb :tracks }
-    wants.xml { builder :tracks }
-    wants.json {@tracks.to_json}
-  end
-end
-
-#show tracks with limit
-get '/tracks/:limit' do
-  @tracks = Track.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
-  respond_to do |wants|
-    wants.html { erb :tracks }
-    wants.xml { builder :tracks }
-    wants.json {@tracks.to_json}
-  end
-end
-
-# show plays for a track
-get '/track/:id/play/all' do
-  content_type 'text/xml', :charset => 'utf-8'
-    @plays = Track.get(params[:id]).plays
-end
-
-#show all artists
+#show all albums
 get '/albums' do
   @albums =  Album.all(:limit => 10, :order => [:created_at.desc ])
     respond_to do |wants|
@@ -283,7 +165,7 @@ get '/albums' do
     end
 end
 
-#show all artists
+#show all albums with limit
 get '/albums/:limit' do
   @albums =  Album.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
   respond_to do |wants|
@@ -313,16 +195,56 @@ get '/album/:id/tracks' do
   end
 end
 
-# show tracks for specific channel
-get '/channel/:id/plays' do
-  @channel_tracks = Channel.get(params[:id]).plays.tracks
-  respond_to do |wants|
-    wants.xml { @channel_tracks.to_xml }
-    wants.json { @channel_tracks.to_json }
+#show tracks
+get '/tracks' do
+ @tracks = Track.all(:limit => 10, :order => [:created_at.desc ])
+ respond_to do |wants|
+    wants.html { erb :tracks }
+    wants.xml { builder :tracks }
+    wants.json {@tracks.to_json}
   end
 end
 
-# show channel
+#show tracks with limit
+get '/tracks/:limit' do
+  @tracks = Track.all(:limit => params[:limit].to_i, :order => [:created_at.desc ])
+  respond_to do |wants|
+    wants.html { erb :tracks }
+    wants.xml { builder :tracks }
+    wants.json {@tracks.to_json}
+  end
+end
+
+# show track
+get '/track/:id' do
+  @track = Track.get(params[:id])
+  respond_to do |wants|
+    wants.html { erb :track }
+    wants.xml { builder :track }
+    wants.json {@track.to_json}
+  end
+end
+
+#show artists for a track
+
+#show albums for a track
+
+# show plays for a track
+get '/track/:id/play/all' do
+  content_type 'text/xml', :charset => 'utf-8'
+    @plays = Track.get(params[:id]).plays
+end
+
+# show all channels
+get '/channels' do
+    @channels = Channel.all
+    respond_to do |wants|
+      wants.xml { @channels.to_xml }
+      wants.json { @channels.to_json }  
+    end
+end
+
+# show channel from id
 get '/channel/:id' do
     @channel = Channel.get(params[:id])
     respond_to do |wants|
@@ -331,13 +253,12 @@ get '/channel/:id' do
     end
 end
 
-# search artist by name
-get '/search/:q' do
-  @artists = Artist.all(:artistname.like =>'%'+params[:q]+'%')
+# show tracks for specific channel
+get '/channel/:id/plays' do
+  @channel_tracks = Channel.get(params[:id]).plays.tracks
   respond_to do |wants|
-    wants.html { erb :artists }
-    wants.xml { builder :artists }
-    wants.json { @artists.to_json }
+    wants.xml { @channel_tracks.to_xml }
+    wants.json { @channel_tracks.to_json }
   end
 end
 
@@ -356,6 +277,100 @@ get '/chart/artist' do
     wants.xml { builder :artist_chart }
   end
 end
+
+# search artist by name
+get '/search/:q' do
+  @artists = Artist.all(:artistname.like =>'%'+params[:q]+'%')
+  respond_to do |wants|
+    wants.html { erb :artists }
+    wants.xml { builder :artists }
+    wants.json { @artists.to_json }
+  end
+end
+
+#Sinatra version info
+get '/about' do
+  "I'm running version " + Sinatra::VERSION 
+end
+
+#Count all artists
+get '/stats' do
+  @artistcount = Artist.count
+  @trackcount = Track.count
+  @playcount = Play.count
+  @albumcount = Album.count 
+  respond_to do |wants|
+    wants.html { erb :stats }
+  end
+end
+
+#POST
+# create from form
+=begin
+post '/' do
+  @artist = Artist.first_or_create(:artistname => params[:artistname])
+  if @artist.save
+    @albums = Album.first_or_create(:albumname => params[:albumname])
+    @albums.save
+    @tracks = @albums.tracks.first_or_create(:title => params[:tracktitle])
+    @tracks.save
+    @johns = @artist.tracks << @tracks
+ 
+    @plays = @johns.plays.new(:track_id => @tracks.id, :channel_id => 1)
+    @plays.save
+    @artist.save
+    redirect "/artist/#{@artist.id}"
+  else
+    redirect '/'
+  end
+end
+=end
+
+#Fetching xml, parsing and storing it to db
+get '/parse' do
+  #utf-16 issue with triple j feed
+  # http://www.abc.net.au/triplej/feeds/playout/triplejsydneyplayout.xml
+  xml_files = ["http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml",
+               "http://www.abc.net.au/jazz/xml/ABC_JazzJustPlayed.xml",
+               "http://www.abc.net.au/country/xml/ABC_CountryJustPlayed.xml"]
+
+  xml_files.each_with_index do |file,index|
+    xml = Crack::XML.parse(HTTParty.get(file).body)
+      xml["abcmusic_playout"]["items"]["item"].each do |item|
+        if !item['artist']['artistname'].nil?
+        @artist = Artist.first_or_create({:artistname => item['artist']['artistname']},{:artistname => item['artist']['artistname'], :artistnote => item['artist']['artistnote'], :artistlink => item['artist']['artistlink']})
+        if @artist.save
+          #creating and saving album
+          @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
+          @albums.save
+      
+          #creating and saving track - commented out  - issue when multiple
+          @tracks = Track.first_or_create({:title => item['title'],:duration => item['duration']},{:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:tracklink => item['tracklink'],:tracknote => item['tracknote'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted']})
+          @tracks.save
+      
+          #add the track to album
+          @album_tracks = @albums.tracks << @tracks
+          @album_tracks.save
+      
+          #add the track to the artist
+          @johns = @artist.tracks << @tracks
+          @johns.save
+      
+          #artist.tracks.plays: only add if playedtime does not exsist
+          play_items = Play.count(:playedtime=>item['playedtime'], :channel_id=>index+1)
+          if play_items < 1
+            @player = Play.new(:track_id =>@tracks.id, :channel_id => index+1, :playedtime=>item['playedtime'])
+            @player.save
+            @plays = @tracks.plays << @player
+            @plays.save
+          end  
+          @artist.save
+        end
+      end
+      end
+    end
+    redirect '/stats'
+  end
 
 DataMapper.auto_upgrade!
 #DataMapper::auto_migrate!
