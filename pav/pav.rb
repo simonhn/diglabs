@@ -185,13 +185,14 @@ get '/album/:id' do
   end
 end
 
-# show tracks for an album
+# show tracks for an album - json version not perfect
 get '/album/:id/tracks' do
   @album = Album.get(params[:id])
   @tracks = Album.get(params[:id]).tracks
   respond_to do |wants|
     wants.html { erb :album_tracks }
     wants.xml { builder :album_tracks }
+    wants.json {@tracks.to_json }
   end
 end
 
