@@ -80,7 +80,8 @@ class Play
     belongs_to :track
     belongs_to :channel
     def date
-        playedtime.strftime "%R on %B %d, %Y"
+        #converting from utc to aussie time
+        playedtime.new_offset(Rational(+20,24)).strftime "%R on %B %d, %Y"
     end
     #before :save, :update_count
     #def update_count
@@ -282,6 +283,7 @@ end
 
 # show tracks for specific channel
 get '/channel/:id/plays' do
+  @channel_plays = Channel.get(params[:id]).plays
   @channel_tracks = Channel.get(params[:id]).plays.tracks
   respond_to do |wants|
     wants.xml { @channel_tracks.to_xml }
@@ -302,6 +304,13 @@ get '/chart/artist' do
  @artists = repository(:default).adapter.select('select sum(cnt) as count, har.artistname from (select artists.artistname, artists.id, artist_tracks.artist_id, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND tracks.id=artist_tracks.track_id AND artist_tracks.artist_id= artists.id group by tracks.id) as har group by har.artistname order by count desc')
  respond_to do |wants|
     wants.xml { builder :artist_chart }
+  end
+end
+
+get '/chart/album' do
+  @albums = repository(:default).adapter.select('select albums.albumname, albums.id as album_id, tracks.id as track_id, count(*) as cnt from tracks, plays, albums, album_tracks where tracks.id=plays.track_id AND albums.id=album_tracks.album_id AND album_tracks.track_id=tracks.id group by albums.id order by cnt DESC limit 100')
+  respond_to do |wants|
+      wants.xml { builder :album_chart }
   end
 end
 
