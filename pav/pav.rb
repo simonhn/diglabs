@@ -79,6 +79,9 @@ class Play
     property :playedtime, DateTime
     belongs_to :track
     belongs_to :channel
+    def date
+        playedtime.strftime "%R on %B %d, %Y"
+    end
     #before :save, :update_count
     #def update_count
       #augment count with one on Track.play_count where track_id
@@ -227,13 +230,36 @@ get '/track/:id' do
 end
 
 #show artists for a track
+get '/track/:id/artists' do
+  @track = Track.get(params[:id])
+  @artists = Track.get(params[:id]).artists
+  respond_to do |wants|
+    wants.html { erb :track_artists }
+    wants.xml { builder :track_artists }
+    wants.json {@artists.to_json}
+  end
+end
 
 #show albums for a track
+get '/track/:id/albums' do
+  @track = Track.get(params[:id])
+  @albums = Track.get(params[:id]).albums
+  respond_to do |wants|
+    wants.html { erb :track_albums }
+    wants.xml { builder :track_albums }
+    wants.json {@albums.to_json}
+  end
+end
 
 # show plays for a track
-get '/track/:id/play/all' do
-  content_type 'text/xml', :charset => 'utf-8'
-    @plays = Track.get(params[:id]).plays
+get '/track/:id/plays' do
+  @track = Track.get(params[:id])
+  @plays = Track.get(params[:id]).plays
+  respond_to do |wants|
+    wants.html { erb :track_plays }
+    wants.xml { builder :track_plays }
+    wants.json {@plays.to_json}
+  end
 end
 
 # show all channels
@@ -345,7 +371,7 @@ get '/parse' do
           @albums = Album.first_or_create(:albumname => item['album']['albumname'], :albumimage=>item['album']['albumimage'])
           @albums.save
       
-          #creating and saving track - commented out  - issue when multiple
+          #creating and saving track
           @tracks = Track.first_or_create({:title => item['title'],:duration => item['duration']},{:title => item['title'],:show => item['show'],:talent => item['talent'],:aust => item['aust'],:tracklink => item['tracklink'],:tracknote => item['tracknote'],:duration => item['duration'],:publisher => item['publisher'],:datecopyrighted => item['datecopyrighted']})
           @tracks.save
       
