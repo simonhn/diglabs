@@ -62,9 +62,11 @@ desired content type) or by appending the content type to the url (.html, .xml, 
 
 	<li><a href="/channel/1/plays.xml">/channel/:id/plays {xml}</a></li>
 
-	<li><a href="/chart/track.xml">/chart/track {xml}</a></li>
+	<li><a href="/chart/track.xml?played_from=2010-05-10">/chart/track?played_from=yyyy-mm-dd {xml}</a></li>
 
 	<li><a href="/chart/artist.xml">/chart/artist {xml}</a></li>
+
+	<li><a href="/chart/artist.xml?played_from=2010-05-10&played_to=2010-05-11">/chart/artist?played_from=yyyy-mm-dd&played_to=yyyy-mm-dd {xml}</a></li>
 	
 	<li><a href="/chart/album.xml">/chart/album {xml}</a></li>
 
