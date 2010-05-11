@@ -23,7 +23,7 @@ Sinatra::Application.register Sinatra::RespondTo
 
 # MySQL connection:
 configure do
-  DataMapper::Logger.new('log/datamapper.log', :debug)
+  #DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
@@ -315,7 +315,9 @@ get '/chart/track' do
     #Play.count(:playedtime.gt => params[:played_from])
     @tracks = repository(:default).adapter.select("select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id AND playedtime > '#{params[:played_from]}' group by tracks.id order by cnt DESC limit 100")
   end
-  builder :track_chart
+  respond_to do |wants|
+     wants.xml { builder :track_chart }
+   end
 end
 
 # chart of top artist by name
