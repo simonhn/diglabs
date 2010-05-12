@@ -23,7 +23,7 @@ Sinatra::Application.register Sinatra::RespondTo
 
 # MySQL connection:
 configure do
-  #DataMapper::Logger.new('log/datamapper.log', :debug)
+  DataMapper::Logger.new('log/datamapper.log', :debug)
   @config = YAML::load( File.open( 'conf/settings.yml' ) )
   @connection = "#{@config['adapter']}://#{@config['username']}:#{@config['password']}@#{@config['host']}/#{@config['database']}";
   DataMapper::setup(:default, @connection)
@@ -109,6 +109,29 @@ end
 
 error do
   'Sorry there was a nasty error - ' + request.env['sinatra.error'].name
+end
+
+helpers do
+    def make_to_from(played_from, played_to)
+      #both to and from parameters provided
+      if (!played_from.nil? && !played_to.nil?)
+       return "AND playedtime < '#{played_to}' AND playedtime > '#{played_from}'"
+      end
+      #no parameter, sets from a week ago
+      if (played_from.nil? && played_to.nil?)
+        now_date = DateTime.now - 7
+        return "AND playedtime > '#{now_date.strftime("%Y-%m-%d %H:%M:%S")}'"
+      end
+      #only to parameter, setting from a week before that
+      if (played_from.nil? && !played_to.nil?)
+        from_date = DateTime.parse(played_to) - 7
+        return "AND playedtime < '#{played_to}' AND playedtime > '#{from_date.strftime("%Y-%m-%d %H:%M:%S")}'"
+      end
+      #only from parameter
+      if (!played_from.nil? && played_to.nil?)
+       return "AND playedtime > '#{played_from}'"
+      end
+    end
 end
 
 #ROUTES
@@ -284,37 +307,18 @@ end
 # show tracks for specific channel
 get '/channel/:id/plays' do
   @channel_plays = Channel.get(params[:id]).plays
-  @channel_tracks = Channel.get(params[:id]).plays.tracks
+  @channel_tracks = Channel.get(params[:id]).plays(:limit =>10,:order => [:playedtime.desc ]).tracks
   respond_to do |wants|
     wants.xml { @channel_tracks.to_xml }
     wants.json { @channel_tracks.to_json }
   end
 end
 
-=begin # chart of top tracks by name
-get '/chart/track' do
-  @tracks = repository(:default).adapter.select('select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id group by tracks.id order by cnt DESC limit 100')
-  respond_to do |wants|
-      wants.xml { builder :track_chart }
-  end
-end
-=end
-
 # chart of top tracks by name
 get '/chart/track' do
-  #date in this format: 2010-05-11 01:06:14, lt=less than, gt = greater than
-  if (!params[:played_from].nil? && !params[:played_to].nil?)
-    #Play.count(:playedtime.gt => params[:played_from], :playedtime.lt => params[:played_to])
-    @tracks = repository(:default).adapter.select("select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id AND playedtime < '#{params[:played_to]}' AND playedtime > '#{params[:played_from]}' group by tracks.id order by cnt DESC limit 100")
-  end
-  if (params[:played_from].nil? && !params[:played_to].nil?)
-    @tracks = repository(:default).adapter.select("select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id AND playedtime < '#{params[:played_to]}' group by tracks.id order by cnt DESC limit 100")
-    #Play.count(:playedtime.lt => params[:played_to])
-  end
-  if (!params[:played_from].nil? && params[:played_to].nil?)
-    #Play.count(:playedtime.gt => params[:played_from])
-    @tracks = repository(:default).adapter.select("select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id AND playedtime > '#{params[:played_from]}' group by tracks.id order by cnt DESC limit 100")
-  end
+  #date in this format: 2010-05-11 01:06:14
+  to_from = make_to_from(params[:played_from], params[:played_to])
+  @tracks = repository(:default).adapter.select("select artists.artistname, tracks.id, tracks.title, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND artists.id=artist_tracks.artist_id AND artist_tracks.track_id=tracks.id #{to_from} group by tracks.id order by cnt DESC limit 100")
   respond_to do |wants|
      wants.xml { builder :track_chart }
    end
@@ -322,14 +326,16 @@ end
 
 # chart of top artist by name
 get '/chart/artist' do
- @artists = repository(:default).adapter.select("select sum(cnt) as count, har.artistname from (select artists.artistname, artists.id, artist_tracks.artist_id, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND tracks.id=artist_tracks.track_id AND artist_tracks.artist_id= artists.id AND playedtime < '#{params[:played_to]}' AND playedtime > '#{params[:played_from]}' group by tracks.id) as har group by har.artistname order by count desc")
+ to_from = make_to_from(params[:played_from], params[:played_to])
+ @artists = repository(:default).adapter.select("select sum(cnt) as count, har.artistname from (select artists.artistname, artists.id, artist_tracks.artist_id, count(*) as cnt from tracks, plays, artists, artist_tracks where tracks.id=plays.track_id AND tracks.id=artist_tracks.track_id AND artist_tracks.artist_id= artists.id #{to_from} group by tracks.id) as har group by har.artistname order by count desc")
  respond_to do |wants|
     wants.xml { builder :artist_chart }
   end
 end
 
 get '/chart/album' do
-  @albums = repository(:default).adapter.select('select albums.albumname, albums.id as album_id, tracks.id as track_id, count(*) as cnt from tracks, plays, albums, album_tracks where tracks.id=plays.track_id AND albums.id=album_tracks.album_id AND album_tracks.track_id=tracks.id group by albums.id order by cnt DESC limit 100')
+  to_from = make_to_from(params[:played_from], params[:played_to])
+  @albums = repository(:default).adapter.select("select albums.albumname, albums.id as album_id, tracks.id as track_id, count(*) as cnt from tracks, plays, albums, album_tracks where tracks.id=plays.track_id AND albums.id=album_tracks.album_id AND album_tracks.track_id=tracks.id #{to_from} group by albums.id order by cnt DESC limit 100")
   respond_to do |wants|
       wants.xml { builder :album_chart }
   end
