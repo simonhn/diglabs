@@ -81,7 +81,8 @@ class Play
     belongs_to :channel
     def date
         #converting from utc to aussie time
-        playedtime.new_offset(Rational(+20,24)).strftime "%R on %B %d, %Y"
+        playedtime.strftime "%Y-%m-%d %H:%M:%S"
+        #playedtime.new_offset(Rational(+20,24)).strftime "%R on %B %d, %Y"
     end
     #before :save, :update_count
     #def update_count
