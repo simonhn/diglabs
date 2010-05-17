@@ -9,7 +9,7 @@ xml.plays do
 xml.play do
   xml.id play.id
   xml.channel_id play.channel_id
-  xml.playedtime play.playedtime
+  xml.playedtime play.date
 end
 end
 end
