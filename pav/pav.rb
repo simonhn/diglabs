@@ -183,6 +183,16 @@ get '/artist/:id/tracks' do
   end
 end
 
+# show tracks from artist
+get '/artist/:id/plays' do
+  @artist = Artist.get(params[:id])
+  @plays = Artist.get(params[:id]).tracks.plays
+  respond_to do |wants|
+    wants.html { erb :artist_plays }
+    wants.xml { builder :artist_plays }
+  end
+end
+
 #show all albums
 get '/albums' do
   @albums =  Album.all(:limit => 10, :order => [:created_at.desc ])
