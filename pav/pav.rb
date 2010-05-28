@@ -113,6 +113,19 @@ error do
 end
 
 helpers do
+  
+  def protected!
+      unless authorized?
+        response['WWW-Authenticate'] = %(Basic realm="Testing HTTP Auth")
+        throw(:halt, [401, "Not authorized\n"])
+      end
+    end
+
+    def authorized?
+      @auth ||=  Rack::Auth::Basic::Request.new(request.env)
+      @auth.provided? && @auth.basic? && @auth.credentials && @auth.credentials == ['admin', 'admin']
+    end
+    
     def make_to_from(played_from, played_to)
       #both to and from parameters provided
       if (!played_from.nil? && !played_to.nil?)
@@ -402,6 +415,7 @@ end
 
 #Fetching xml, parsing and storing it to db
 get '/parse' do
+  protected!
   #utf-16 issue with triple j feed
   # http://www.abc.net.au/triplej/feeds/playout/triplejsydneyplayout.xml
   xml_files = ["http://www.abc.net.au/dig/xml/ABC_Dig_MusicJustPlayed.xml",
